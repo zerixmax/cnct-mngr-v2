@@ -204,6 +204,19 @@ class ContactManager:
             if org_id in self.organizations:
                 return org_id
             self._show_error("Organization not found!")
+
+    def validate_required_fields(self, data: Dict, required_fields: List[str]) -> List[str]:
+        """Validate required fields and return missing ones."""
+        missing_fields = []
+        for field in required_fields:
+            if field not in data or not str(data[field]).strip():
+                missing_fields.append(field)
+        return missing_fields
+
+    def get_organization_names(self) -> List[str]:
+        """Get list of all organization names."""
+        return [org['name'] for org in self.organizations.values()]
+
     
     # Organization Management
     def add_organization(self) -> None:
@@ -305,6 +318,15 @@ class ContactManager:
         self._show_success(f"Organization '{org_name}' and all related data deleted.")
         input("⏸️  Press Enter to continue...")
     
+    def search_organizations(self, query: str) -> List[Dict]:
+        """Search organizations by name or address."""
+        results = []
+        for org in self.organizations.values():
+            if (query.lower() in org['name'].lower() or
+                query.lower() in org['address'].lower()):
+                results.append(org)
+        return results
+    
     # Employee Management
     def add_employee(self) -> None:
         """Add new employee."""
@@ -372,6 +394,16 @@ class ContactManager:
             print(f"{emp['id']:<4} {full_name:<25} {emp['position']:<20} {emp['phone']:<15} {org_name:<25}")
             
         input("\n⏸️  Press Enter to continue...")
+
+    def search_employees(self, query: str) -> List[Dict]:
+        """Search employees by name or position."""
+        results = []
+        for emp in self.employees.values():
+            full_name = f"{emp['first_name']} {emp['last_name']}"
+            if (query.lower() in full_name.lower() or
+                query.lower() in emp['position'].lower()):
+                results.append(emp)
+        return results
     
     # Customer Management  
     def add_customer(self) -> None:
@@ -434,6 +466,16 @@ class ContactManager:
             
         input("\n⏸️  Press Enter to continue...")
     
+    def search_customers(self, query: str) -> List[Dict]:
+        """Search customers by name or contact person."""
+        results = []
+        for cust in self.customers.values():
+            if (query.lower() in cust['name'].lower() or
+                (cust.get('contact_person') and query.lower() in cust['contact_person'].lower())):
+                results.append(cust)
+        return results
+
+
     # Product Management
     def add_product(self) -> None:
         """Add new product."""
@@ -531,6 +573,49 @@ class ContactManager:
                 print(f"   📦 Products:  {org_products}")
         
         input("\n⏸️  Press Enter to continue...")
+
+    def _display_search_results(self, entity_type: str, results: List[Dict]) -> None:
+        """Display search results in a formatted way."""
+        self._show_header(f"SEARCH RESULTS: {entity_type}")
+        if not results:
+            print(f"📭 No {entity_type.lower()} found matching your query.")
+        else:
+            print(f"🔍 Found {len(results)} result(s):")
+            print("─" * 60)
+            for item in results:
+                if entity_type == "Employees":
+                    name = f"{item.get('first_name', '')} {item.get('last_name', '')}".strip()
+                    details = f"Position: {item.get('position', 'N/A')}"
+                else:
+                    name = item.get('name', 'Unknown')
+                    details = f"ID: {item.get('id')}"
+                print(f"   • {name} ({details})")
+        
+        input("\n⏸️  Press Enter to continue...")
+
+    def _search_menu(self) -> None:
+        """Search functionality menu."""
+        while True:
+            self._show_header("🔍 SEARCH")
+            print("1️⃣  Search Organizations")
+            print("2️⃣  Search Employees")
+            print("3️⃣  Search Customers")
+            print("0️⃣  Back to Main Menu")
+            
+            choice = input("\n🎯 Select option: ").strip()
+            
+            if choice == '1':
+                query = self._get_input("Search organizations by name or address")
+                if query:
+                    results = self.search_organizations(query)
+                    self._display_search_results("Organizations", results)
+            elif choice == '2':
+                query = self._get_input("Search employees by name or position")
+                if query:
+                    results = self.search_employees(query)
+                    self._display_search_results("Employees", results)
+            elif choice == '0':
+                break
     
     def run(self) -> None:
         """Main application loop."""
@@ -543,12 +628,12 @@ class ContactManager:
             print("2️⃣  Employees")
             print("3️⃣  Customers")
             print("4️⃣  Products")
-            print("📊 Dashboard")
             print("5️⃣  Dashboard")
+            print("6️⃣  Search")
             print("0️⃣  Exit")
             print()
             
-            choice = input("🎯 Select option: ").strip()
+            choice = input("🎯 Select option: ").strip().lower()
             
             if choice == '1':
                 self._organization_menu()
@@ -560,6 +645,8 @@ class ContactManager:
                 self._product_menu()
             elif choice == '5':
                 self.show_dashboard()
+            elif choice == '6':
+                self._search_menu()
             elif choice == '0':
                 self._show_header("👋 THANK YOU!")
                 print("Contact Manager 2.0")
@@ -578,10 +665,11 @@ class ContactManager:
             print("1️⃣  Add Organization")
             print("2️⃣  View All Organizations")
             print("3️⃣  Delete Organization")
+            # Search is now in its own menu
             print("0️⃣  Back to Main Menu")
             print()
             
-            choice = input("🎯 Select option: ").strip()
+            choice = input("🎯 Select option: ").strip().lower()
             
             if choice == '1':
                 self.add_organization()
@@ -604,7 +692,7 @@ class ContactManager:
             print("0️⃣  Back to Main Menu")
             print()
             
-            choice = input("🎯 Select option: ").strip()
+            choice = input("🎯 Select option: ").strip().lower()
             
             if choice == '1':
                 self.add_employee()
@@ -625,7 +713,7 @@ class ContactManager:
             print("0️⃣  Back to Main Menu")
             print()
             
-            choice = input("🎯 Select option: ").strip()
+            choice = input("🎯 Select option: ").strip().lower()
             
             if choice == '1':
                 self.add_customer()
@@ -646,7 +734,7 @@ class ContactManager:
             print("0️⃣  Back to Main Menu")
             print()
             
-            choice = input("🎯 Select option: ").strip()
+            choice = input("🎯 Select option: ").strip().lower()
             
             if choice == '1':
                 self.add_product()
